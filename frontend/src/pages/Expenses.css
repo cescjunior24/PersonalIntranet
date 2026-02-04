@@ -1,0 +1,100 @@
+.expenses-page {
+  padding: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.expenses-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.expenses-header h1 {
+  margin: 0;
+}
+.expense-date {
+  font-size: 11px;
+  color: #888;
+}
+/* Mes */
+.month-group {
+  margin-bottom: 24px;
+}
+
+.month-title {
+  font-size: 18px;
+  margin-bottom: 10px;
+  text-transform: capitalize;
+}
+
+/* Gasto */
+.expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.expense-meta {
+  font-size: 12px;
+  color: #666;
+}
+
+.expense-amount {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.month-total {
+  font-size: 14px;
+  font-weight: normal;
+  color: #555;
+  margin-left: 8px;
+}
+.expenses-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Botón tipo link para estadísticas */
+.stats-link {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background-color: #f2f2f2;
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.stats-link:hover {
+  background-color: #e5e5e5;
+}
+
+/* Móvil: que no se rompa */
+@media (max-width: 480px) {
+  .expenses-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+
+.expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-delete {
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.btn-delete:hover {
+  opacity: 0.7;
+}

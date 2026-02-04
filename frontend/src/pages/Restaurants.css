@@ -1,0 +1,81 @@
+.card-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.restaurants-page {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.restaurants-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.restaurants-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* Grid */
+.restaurants-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+/* Imagen restaurante */
+.restaurant-image {
+  width: 100%;
+  max-height: 200px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+
+/* Fecha */
+.date {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Acciones */
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: flex-end;
+}
+
+/* ========================= */
+/* 📱 TABLET */
+/* ========================= */
+@media (min-width: 600px) {
+  .restaurants-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .restaurants-header h1 {
+    font-size: 24px;
+  }
+}
+
+/* ========================= */
+/* 🖥️ DESKTOP */
+/* ========================= */
+@media (min-width: 1024px) {
+  .restaurants-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .restaurants-page {
+    padding: 24px;
+  }
+}

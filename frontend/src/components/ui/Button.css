@@ -1,0 +1,97 @@
+/* =========================
+   BASE BUTTON
+========================= */
+button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px; /* ideal para móvil */
+}
+
+/* =========================
+   PRIMARY (GUARDAR)
+========================= */
+.btn-primary {
+  background-color: #111;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background-color: #333;
+}
+
+/* =========================
+   SECONDARY (CANCELAR)
+========================= */
+.btn-secondary {
+  background-color: #f2f2f2;
+  color: #333;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e5e5;
+}
+
+/* =========================
+   DISABLED (por si luego lo usas)
+========================= */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* =========================
+   TABLET
+========================= */
+@media (min-width: 600px) {
+  button {
+    font-size: 15px;
+    padding: 12px 18px;
+  }
+}
+
+
+/* =========================
+   EDIT (EDITAR)
+========================= */
+.btn-edit {
+  background-color: #f4f4f5;
+  color: #333;
+}
+
+.btn-edit:hover {
+  background-color: #e7e7ea;
+}
+
+/* =========================
+   DELETE (ELIMINAR)
+========================= */
+.btn-delete {
+  background-color: #ffecec;
+  color: #b00020;
+}
+
+.btn-delete:hover {
+  background-color: #ffd6d6;
+}
+
+/* =========================
+   DESKTOP
+========================= */
+@media (min-width: 1024px) {
+  button {
+    font-size: 15px;
+  }
+
+  .btn-primary:hover,
+  .btn-secondary:hover {
+    transform: translateY(-1px);
+  }
+}
