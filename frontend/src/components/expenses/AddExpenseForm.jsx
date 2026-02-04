@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Card from "../common/Card";
 import Button from "../ui/Button";
 import "./AddExpenseForm.css";
 import { API_URL } from "../../config";
 
-function AddExpenseForm({ onAdd, onCancel }) {
+function AddExpenseForm({ onAdd, onCancel, expense }) {
   const today = new Date().toISOString().split("T")[0];
 
   const [title, setTitle] = useState("");
@@ -12,15 +12,22 @@ function AddExpenseForm({ onAdd, onCancel }) {
   const [person, setPerson] = useState("Fran");
   const [category, setCategory] = useState("Comida");
   const [date, setDate] = useState(today);
-  const [saving, setSaving] = useState(false);
+
+  // 🔥 PREFILL SI EDITAMOS
+  useEffect(() => {
+    if (expense) {
+      setTitle(expense.title);
+      setAmount(expense.amount);
+      setPerson(expense.person);
+      setCategory(expense.category);
+      setDate(expense.date);
+    }
+  }, [expense]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (saving) return;
 
-    setSaving(true);
-
-    const expense = {
+    const payload = {
       title,
       amount: Number(amount),
       person,
@@ -28,38 +35,36 @@ function AddExpenseForm({ onAdd, onCancel }) {
       date,
     };
 
-    fetch(`${API_URL}/api/expenses`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(expense),
+    const isEditing = Boolean(expense);
+    const url = isEditing
+      ? `${API_URL}/api/expenses/${expense.id}`
+      : `${API_URL}/api/expenses`;
+
+    const method = isEditing ? "PUT" : "POST";
+
+    fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     })
       .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error al guardar el gasto");
-        }
+        if (!res.ok) throw new Error("Error guardando gasto");
         return res.json();
       })
       .then((data) => {
         onAdd(data);
       })
-      .catch((err) => {
-        console.error("Error guardando gasto:", err);
-        alert("No se pudo guardar el gasto 😕");
-      })
-      .finally(() => {
-        setSaving(false);
-      });
+      .catch((err) =>
+        console.error("Error guardando gasto:", err)
+      );
   };
 
   return (
-    <Card title="Añadir gasto">
+    <Card title={expense ? "Editar gasto" : "Añadir gasto"}>
       <form className="expense-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Título</label>
           <input
-            placeholder="Ej. Cena pizza"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
@@ -72,7 +77,6 @@ function AddExpenseForm({ onAdd, onCancel }) {
           <input
             type="number"
             step="0.01"
-            placeholder="23.50"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             required
@@ -81,10 +85,7 @@ function AddExpenseForm({ onAdd, onCancel }) {
 
         <div className="form-group">
           <label>Persona</label>
-          <select
-            value={person}
-            onChange={(e) => setPerson(e.target.value)}
-          >
+          <select value={person} onChange={(e) => setPerson(e.target.value)}>
             <option value="Fran">Fran</option>
             <option value="Eli">Eli</option>
             <option value="Compartido">Compartido</option>
@@ -93,10 +94,7 @@ function AddExpenseForm({ onAdd, onCancel }) {
 
         <div className="form-group">
           <label>Categoría</label>
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="Comida">Comida</option>
             <option value="Ocio">Ocio</option>
             <option value="Boticelli">Boticelli</option>
@@ -108,24 +106,16 @@ function AddExpenseForm({ onAdd, onCancel }) {
 
         <div className="form-group">
           <label>Fecha</label>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
 
         <div className="form-actions">
           <Button
-            text={saving ? "Guardando..." : "Guardar"}
+            text={expense ? "Guardar cambios" : "Guardar"}
             type="submit"
             className="btn-primary"
           />
-          <Button
-            text="Cancelar"
-            onClick={onCancel}
-            className="btn-secondary"
-          />
+          <Button text="Cancelar" onClick={onCancel} className="btn-secondary" />
         </div>
       </form>
     </Card>

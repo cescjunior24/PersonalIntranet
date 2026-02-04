@@ -12,6 +12,7 @@ function Expenses() {
   const [expenses, setExpenses] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [editingExpense, setEditingExpense] = useState(null);
 
   // =========================
   // CARGAR GASTOS
@@ -36,12 +37,24 @@ function Expenses() {
   // =========================
   // AÑADIR GASTO
   // =========================
-  const handleAddExpense = (newExpense) => {
-    setExpenses((prev) => [newExpense, ...prev]);
-    setShowForm(false);
-    setVisibleCount(PAGE_SIZE);
-  };
+  const handleAddExpense = (updatedExpense) => {
+    setExpenses((prev) => {
+      const exists = prev.find((e) => e.id === updatedExpense.id);
 
+      if (exists) {
+        // ✏️ EDIT
+        return prev.map((e) =>
+          e.id === updatedExpense.id ? updatedExpense : e
+        );
+      }
+
+      // ➕ CREATE
+      return [updatedExpense, ...prev];
+    });
+
+  setShowForm(false);
+  setEditingExpense(null);
+};
   // =========================
   // ELIMINAR GASTO
   // =========================
@@ -112,11 +125,14 @@ function Expenses() {
         )}
       </div>
 
-      {/* FORMULARIO */}
       {showForm && (
         <AddExpenseForm
+          expense={editingExpense}
           onAdd={handleAddExpense}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setShowForm(false);
+            setEditingExpense(null);
+          }}
         />
       )}
 
@@ -157,7 +173,14 @@ function Expenses() {
                         <div className="expense-amount">
                           {expense.amount.toFixed(2)} €
                         </div>
-
+                        <Button
+                          text="✏️"
+                          className="btn-edit"
+                          onClick={() => {
+                            setEditingExpense(expense);
+                            setShowForm(true);
+                          }}
+                        />
                         <Button
                           text="🗑️"
                           className="btn-delete"

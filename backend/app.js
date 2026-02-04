@@ -5,7 +5,7 @@ const multer = require("multer");
 const path = require("path");
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 // =========================
 // MIDDLEWARE GLOBAL
@@ -195,6 +195,39 @@ app.delete("/api/expenses/:id", (req, res) => {
   });
 });
 
+
+app.put("/api/expenses/:id", (req, res) => {
+  const { id } = req.params;
+  const { title, amount, person, category, date } = req.body;
+
+  if (!title || !amount || !person || !category) {
+    return res.status(400).json({ error: "Faltan campos obligatorios" });
+  }
+
+  db.run(
+    `
+      UPDATE expenses
+      SET title = ?, amount = ?, person = ?, category = ?, date = ?
+      WHERE id = ?
+    `,
+    [title, amount, person, category, date, id],
+    function (err) {
+      if (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      res.json({
+        id: Number(id),
+        title,
+        amount,
+        person,
+        category,
+        date,
+      });
+    }
+  );
+});
+
 // =========================
 // ❗ PROTECCIÓN API (CLAVE)
 // =========================
@@ -222,5 +255,5 @@ app.use((req, res) => {
 // START SERVER
 // =========================
 app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en puerto ${PORT}`);
 });
