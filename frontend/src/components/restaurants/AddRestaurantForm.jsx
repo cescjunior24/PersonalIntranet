@@ -18,24 +18,31 @@ function AddRestaurantForm({ onAdd, onCancel, restaurant }) {
   // =========================
   // PREFILL / RESET
   // =========================
-  useEffect(() => {
-    if (restaurant) {
-      setName(restaurant.name || "");
-      setCity(restaurant.city || "");
-      setVisitDate(restaurant.visit_date || today);
-      setRating(restaurant.rating || 5);
-      setComment(restaurant.comment || "");
-      setImage(null);
-    } else {
-      // reset al crear
-      setName("");
-      setCity("");
-      setVisitDate(today);
-      setRating(5);
-      setComment("");
-      setImage(null);
-    }
-  }, [restaurant, today]);
+useEffect(() => {
+  if (restaurant) {
+    setName(restaurant.name || "");
+    setCity(restaurant.city || "");
+
+    // 🔥 NORMALIZAR FECHA PARA INPUT DATE
+    const formattedDate = restaurant.visit_date
+      ? restaurant.visit_date.split("T")[0]
+      : today;
+
+    setVisitDate(formattedDate);
+
+    setRating(restaurant.rating || 5);
+    setComment(restaurant.comment || "");
+    setImage(null);
+  } else {
+    // reset al crear
+    setName("");
+    setCity("");
+    setVisitDate(today);
+    setRating(5);
+    setComment("");
+    setImage(null);
+  }
+}, [restaurant, today]);
 
   // =========================
   // SUBMIT

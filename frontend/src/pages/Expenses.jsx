@@ -15,6 +15,14 @@ function Expenses() {
   const [editingExpense, setEditingExpense] = useState(null);
 
   // =========================
+  // NORMALIZAR DATOS (Postgres NUMERIC → number)
+  // =========================
+  const normalizeExpense = (e) => ({
+    ...e,
+    amount: Number(e.amount),
+  });
+
+  // =========================
   // CARGAR GASTOS
   // =========================
   useEffect(() => {
@@ -24,9 +32,12 @@ function Expenses() {
         return res.json();
       })
       .then((data) => {
-        const sorted = [...data].sort(
+        const normalized = data.map(normalizeExpense);
+
+        const sorted = normalized.sort(
           (a, b) => new Date(b.date) - new Date(a.date)
         );
+
         setExpenses(sorted);
       })
       .catch((err) =>
@@ -35,26 +46,27 @@ function Expenses() {
   }, []);
 
   // =========================
-  // AÑADIR GASTO
+  // AÑADIR / EDITAR GASTO
   // =========================
   const handleAddExpense = (updatedExpense) => {
+    const normalized = normalizeExpense(updatedExpense);
+
     setExpenses((prev) => {
-      const exists = prev.find((e) => e.id === updatedExpense.id);
+      const exists = prev.find((e) => e.id === normalized.id);
 
       if (exists) {
-        // ✏️ EDIT
         return prev.map((e) =>
-          e.id === updatedExpense.id ? updatedExpense : e
+          e.id === normalized.id ? normalized : e
         );
       }
 
-      // ➕ CREATE
-      return [updatedExpense, ...prev];
+      return [normalized, ...prev];
     });
 
-  setShowForm(false);
-  setEditingExpense(null);
-};
+    setShowForm(false);
+    setEditingExpense(null);
+  };
+
   // =========================
   // ELIMINAR GASTO
   // =========================
@@ -125,6 +137,7 @@ function Expenses() {
         )}
       </div>
 
+      {/* FORMULARIO */}
       {showForm && (
         <AddExpenseForm
           expense={editingExpense}
@@ -173,6 +186,7 @@ function Expenses() {
                         <div className="expense-amount">
                           {expense.amount.toFixed(2)} €
                         </div>
+
                         <Button
                           text="✏️"
                           className="btn-edit"
@@ -181,6 +195,7 @@ function Expenses() {
                             setShowForm(true);
                           }}
                         />
+
                         <Button
                           text="🗑️"
                           className="btn-delete"

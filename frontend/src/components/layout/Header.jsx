@@ -22,7 +22,7 @@ function Header() {
       <nav className={`nav ${open ? "open" : ""}`}>
         <Link to="/" onClick={() => setOpen(false)}>Inicio</Link>
         <Link to="/restaurants" onClick={() => setOpen(false)}>Restaurantes</Link>
-        <Link to="/gastos" onClick={() => setOpen(false)}>Gastos</Link>
+        <Link to="/expenses" onClick={() => setOpen(false)}>Gastos</Link>
         <Link to="/peliculas" onClick={() => setOpen(false)}>Películas</Link>
       </nav>
     </header>

@@ -1,251 +1,269 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./db/database");
-const multer = require("multer");
 const path = require("path");
+const multer = require("multer");
+const { Pool } = require("pg");
 
+// =========================
+// APP
+// =========================
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // =========================
-// MIDDLEWARE GLOBAL
+// MIDDLEWARES
 // =========================
 app.use(cors());
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
 // =========================
-// MULTER CONFIG
+// POSTGRESQL
 // =========================
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueName);
-  },
+const db = new Pool({
+  host: process.env.DB_HOST || "localhost",
+  port: 5432,
+  user: process.env.DB_USER || "francesc",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "gastos_app",
 });
 
+db.connect()
+  .then(() => console.log("✅ PostgreSQL conectado"))
+  .catch((err) => {
+    console.error("❌ Error conectando a PostgreSQL", err);
+    process.exit(1);
+  });
+
+// =========================
+// MULTER (IMÁGENES)
+// =========================
+const storage = multer.diskStorage({
+  destination: (_, __, cb) => cb(null, "uploads/"),
+  filename: (_, file, cb) => {
+    const unique = Date.now() + path.extname(file.originalname);
+    cb(null, unique);
+  },
+});
 const upload = multer({ storage });
 
 // =========================
-// API ROUTES
+// HEALTH CHECK
 // =========================
-
-// Health check
-app.get("/api/health", (req, res) => {
+app.get("/api/health", (_, res) => {
   res.json({ status: "ok" });
 });
 
-// =========================
-// RESTAURANTS
-// =========================
-app.get("/api/restaurants", (req, res) => {
-  db.all(
-    "SELECT * FROM restaurants ORDER BY created_at DESC",
-    [],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.json(rows);
-    }
-  );
+// =====================================================
+// ===================== EXPENSES =======================
+// =====================================================
+
+// GET all expenses
+app.get("/api/expenses", async (_, res) => {
+  try {
+    const result = await db.query(
+      "SELECT * FROM expenses ORDER BY date DESC, id DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo gastos" });
+  }
 });
 
-app.post("/api/restaurants", upload.single("image"), (req, res) => {
-  const { name, city, rating, comment, visitDate } = req.body;
-  const imagePath = req.file ? `uploads/${req.file.filename}` : null;
-
-  db.run(
-    `
-    INSERT INTO restaurants (name, city, rating, comment, visit_date, image)
-    VALUES (?, ?, ?, ?, ?, ?)
-    `,
-    [name, city, rating, comment, visitDate, imagePath],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-
-      res.json({
-        id: this.lastID,
-        name,
-        city,
-        rating,
-        comment,
-        visit_date: visitDate,
-        image: imagePath,
-      });
-    }
-  );
-});
-
-app.put("/api/restaurants/:id", upload.single("image"), (req, res) => {
-  const { id } = req.params;
-  const { name, city, rating, comment, visitDate } = req.body;
-
-  const imagePath = req.file ? `uploads/${req.file.filename}` : null;
-
-  const sql = imagePath
-    ? `
-      UPDATE restaurants
-      SET name = ?, city = ?, rating = ?, comment = ?, visit_date = ?, image = ?
-      WHERE id = ?
-    `
-    : `
-      UPDATE restaurants
-      SET name = ?, city = ?, rating = ?, comment = ?, visit_date = ?
-      WHERE id = ?
-    `;
-
-  const params = imagePath
-    ? [name, city, rating, comment, visitDate, imagePath, id]
-    : [name, city, rating, comment, visitDate, id];
-
-  db.run(sql, params, function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    res.json({
-      id,
-      name,
-      city,
-      rating,
-      comment,
-      visit_date: visitDate,
-      image: imagePath,
-    });
-  });
-});
-
-app.delete("/api/restaurants/:id", (req, res) => {
-  const { id } = req.params;
-
-  db.run("DELETE FROM restaurants WHERE id = ?", [id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json({ success: true });
-  });
-});
-
-// =========================
-// EXPENSES
-// =========================
-app.get("/api/expenses", (req, res) => {
-  db.all(
-    "SELECT * FROM expenses ORDER BY date DESC",
-    [],
-    (err, rows) => {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      res.json(rows);
-    }
-  );
-});
-
-app.post("/api/expenses", (req, res) => {
+// CREATE expense
+app.post("/api/expenses", async (req, res) => {
   const { title, amount, person, category, date } = req.body;
 
   if (!title || !amount || !person || !category) {
-    return res.status(400).json({
-      error: "Faltan campos obligatorios",
-    });
+    return res.status(400).json({ error: "Campos obligatorios" });
   }
 
   const finalDate =
     date || new Date().toISOString().split("T")[0];
 
-  db.run(
-    `
-    INSERT INTO expenses (title, amount, person, category, date)
-    VALUES (?, ?, ?, ?, ?)
-    `,
-    [title, amount, person, category, finalDate],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
+  try {
+    const result = await db.query(
+      `
+      INSERT INTO expenses (title, amount, person, category, date)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+      `,
+      [title, amount, person, category, finalDate]
+    );
 
-      res.json({
-        id: this.lastID,
-        title,
-        amount,
-        person,
-        category,
-        date: finalDate,
-      });
-    }
-  );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error creando gasto" });
+  }
 });
 
-app.delete("/api/expenses/:id", (req, res) => {
-  const { id } = req.params;
-
-  db.run("DELETE FROM expenses WHERE id = ?", [id], function (err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-
-    res.json({ success: true });
-  });
-});
-
-
-app.put("/api/expenses/:id", (req, res) => {
+// UPDATE expense
+app.put("/api/expenses/:id", async (req, res) => {
   const { id } = req.params;
   const { title, amount, person, category, date } = req.body;
 
-  if (!title || !amount || !person || !category) {
-    return res.status(400).json({ error: "Faltan campos obligatorios" });
-  }
-
-  db.run(
-    `
+  try {
+    const result = await db.query(
+      `
       UPDATE expenses
-      SET title = ?, amount = ?, person = ?, category = ?, date = ?
-      WHERE id = ?
-    `,
-    [title, amount, person, category, date, id],
-    function (err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
+      SET title = $1,
+          amount = $2,
+          person = $3,
+          category = $4,
+          date = $5
+      WHERE id = $6
+      RETURNING *
+      `,
+      [title, amount, person, category, date, id]
+    );
 
-      res.json({
-        id: Number(id),
-        title,
-        amount,
-        person,
-        category,
-        date,
-      });
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Gasto no encontrado" });
     }
-  );
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error actualizando gasto" });
+  }
 });
 
-// =========================
-// ❗ PROTECCIÓN API (CLAVE)
-// =========================
-app.use("/api", (req, res) => {
-  res.status(404).json({ error: "API route not found" });
+// DELETE expense
+app.delete("/api/expenses/:id", async (req, res) => {
+  try {
+    const result = await db.query(
+      "DELETE FROM expenses WHERE id = $1",
+      [req.params.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Gasto no encontrado" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error eliminando gasto" });
+  }
 });
 
-// =========================
-// SERVIR FRONTEND (PRODUCCIÓN)
-// =========================
-app.use(
-  express.static(
-    path.join(__dirname, "../frontend/dist")
-  )
+// =====================================================
+// =================== RESTAURANTS ======================
+// =====================================================
+
+// GET restaurants
+app.get("/api/restaurants", async (_, res) => {
+  try {
+    const result = await db.query(
+      "SELECT * FROM restaurants ORDER BY created_at DESC"
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error obteniendo restaurantes" });
+  }
+});
+
+// CREATE restaurant
+app.post(
+  "/api/restaurants",
+  upload.single("image"),
+  async (req, res) => {
+    const { name, city, rating, comment, visitDate } = req.body;
+    const imagePath = req.file
+      ? `uploads/${req.file.filename}`
+      : null;
+
+    if (!name || !visitDate) {
+      return res.status(400).json({ error: "Campos obligatorios" });
+    }
+
+    try {
+      const result = await db.query(
+        `
+        INSERT INTO restaurants
+        (name, city, rating, comment, visit_date, image)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+        `,
+        [name, city, rating, comment, visitDate, imagePath]
+      );
+
+      res.status(201).json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error creando restaurante" });
+    }
+  }
 );
 
-// React Router fallback — EXPRESS 5 SAFE
-app.use((req, res) => {
+// UPDATE restaurant
+app.put(
+  "/api/restaurants/:id",
+  upload.single("image"),
+  async (req, res) => {
+    const { id } = req.params;
+    const { name, city, rating, comment, visitDate } = req.body;
+
+    const imagePath = req.file
+      ? `uploads/${req.file.filename}`
+      : null;
+
+    try {
+      const result = await db.query(
+        `
+        UPDATE restaurants
+        SET name = $1,
+            city = $2,
+            rating = $3,
+            comment = $4,
+            visit_date = $5,
+            image = COALESCE($6, image)
+        WHERE id = $7
+        RETURNING *
+        `,
+        [name, city, rating, comment, visitDate, imagePath, id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: "No encontrado" });
+      }
+
+      res.json(result.rows[0]);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: "Error actualizando restaurante" });
+    }
+  }
+);
+
+// DELETE restaurant
+app.delete("/api/restaurants/:id", async (req, res) => {
+  try {
+    const result = await db.query(
+      "DELETE FROM restaurants WHERE id = $1",
+      [req.params.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "No encontrado" });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error eliminando restaurante" });
+  }
+});
+
+// =====================================================
+// ================= FRONTEND PROD =====================
+// =====================================================
+app.use(express.static(path.join(__dirname, "../frontend/dist")));
+
+app.get(/.*/, (_, res) => {
   res.sendFile(
     path.join(__dirname, "../frontend/dist/index.html")
   );
@@ -255,5 +273,5 @@ app.use((req, res) => {
 // START SERVER
 // =========================
 app.listen(PORT, () => {
-  console.log(`Servidor escuchando en puerto ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
