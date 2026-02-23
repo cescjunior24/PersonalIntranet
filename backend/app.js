@@ -21,11 +21,10 @@ app.use("/uploads", express.static("uploads"));
 // POSTGRESQL
 // =========================
 const db = new Pool({
-  host: process.env.DB_HOST || "localhost",
-  port: 5432,
-  user: process.env.DB_USER || "francesc",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "gastos_app",
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === "production"
+    ? { rejectUnauthorized: false }
+    : false,
 });
 
 db.connect()
