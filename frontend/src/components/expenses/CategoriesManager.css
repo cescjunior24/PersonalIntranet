@@ -1,0 +1,144 @@
+/* =============================================
+   CATEGORIES MANAGER
+   ============================================= */
+.cat-manager {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cat-manager-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.cat-manager-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cat-manager-hint {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+/* ── LISTA DE CHIPS ── */
+.cat-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cat-empty {
+  font-size: 13px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.cat-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 10px 5px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cat-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cat-chip-name {
+  line-height: 1;
+}
+
+.cat-chip-delete {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-3);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 0 0 2px;
+  transition: color 0.15s;
+  min-height: unset;
+  display: flex;
+  align-items: center;
+}
+
+.cat-chip-delete:hover {
+  color: #e11d48;
+}
+
+/* ── AÑADIR ── */
+.cat-add-form {
+  display: flex;
+  gap: 8px;
+}
+
+.cat-add-input {
+  flex: 1;
+  padding: 9px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.cat-add-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  background: var(--surface);
+}
+
+.cat-add-input::placeholder {
+  color: var(--text-3);
+}
+
+.cat-add-btn {
+  background: var(--gradient);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+  min-height: unset;
+}
+
+.cat-add-btn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.cat-add-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cat-error {
+  font-size: 12px;
+  color: #e11d48;
+  font-weight: 500;
+}

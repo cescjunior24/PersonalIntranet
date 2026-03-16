@@ -1,244 +1,309 @@
-import { useEffect, useState } from "react";
-import { API_URL } from "../config";
+import { useEffect, useState, useMemo } from "react";
+import { apiFetch } from "../config";
+import { categoryColor } from "../components/expenses/CategoriesManager";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  LineChart,
-  Line,
-  CartesianGrid,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area,
 } from "recharts";
 import "./ExpenseStats.css";
 
-const COLORS = [
-  "#0088FE",
-  "#00C49F",
-  "#FFBB28",
-  "#FF8042",
-  "#845EC2",
-  "#4D8076",
+// Paleta de colores para personas
+const PERSON_PALETTE = ["#4F8EF7", "#F76497", "#43C59E"];
+
+const PERIODS = [
+  { key: "month",   label: "Este mes" },
+  { key: "3months", label: "3 meses"  },
+  { key: "year",    label: "Este año" },
+  { key: "all",     label: "Todo"     },
 ];
 
+function parseDate(dateStr) {
+  const s = String(dateStr).slice(0, 10);
+  const [y, m, d] = s.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function formatEur(n) {
+  return n.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+}
+
+function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent }) {
+  if (percent < 0.06) return null;
+  const R = Math.PI / 180;
+  const r = innerRadius + (outerRadius - innerRadius) * 0.55;
+  const x = cx + r * Math.cos(-midAngle * R);
+  const y = cy + r * Math.sin(-midAngle * R);
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central"
+      fontSize={12} fontWeight="700">
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+}
+
 function ExpenseStats() {
-  // =========================
-  // ESTADOS
-  // =========================
   const [expenses, setExpenses] = useState([]);
-  const [byCategory, setByCategory] = useState([]);
-  const [byPerson, setByPerson] = useState([]);
-  const [evolutionData, setEvolutionData] = useState([]);
+  const [members,  setMembers]  = useState([]);
+  const [period,   setPeriod]   = useState("month");
 
-  const [view, setView] = useState("month");
-  const [selectedYear, setSelectedYear] = useState(
-    new Date().getFullYear()
-  );
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().getMonth()
-  );
-
-  // =========================
-  // FETCH GASTOS
-  // =========================
   useEffect(() => {
-    fetch(`${API_URL}/api/expenses`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error cargando gastos");
-        }
-        return res.json();
-      })
-      .then((data) => setExpenses(data))
-      .catch((err) =>
-        console.error("Error cargando gastos:", err)
-      );
+    apiFetch(`/api/expenses`)
+      .then((res) => res.json())
+      .then((data) => setExpenses(data.map((e) => ({ ...e, amount: Number(e.amount) }))))
+      .catch((err) => console.error("Error cargando gastos:", err));
+
+    apiFetch(`/api/couples/info`)
+      .then((r) => r.json())
+      .then((d) => setMembers(d.members || []))
+      .catch(() => {});
   }, []);
 
-  // =========================
-  // POR CATEGORÍA / PERSONA
-  // =========================
-  useEffect(() => {
-    const categoryMap = {};
-    const personMap = {};
-
-    expenses.forEach((e) => {
-      categoryMap[e.category] =
-        (categoryMap[e.category] || 0) + e.amount;
-
-      personMap[e.person] =
-        (personMap[e.person] || 0) + e.amount;
+  // Mapa nombre → color para personas
+  const personColors = useMemo(() => {
+    const map = { Compartido: "#43C59E" };
+    members.forEach((m, i) => {
+      map[m.display_name] = PERSON_PALETTE[i] ?? "#9ca3af";
     });
+    return map;
+  }, [members]);
 
-    setByCategory(
-      Object.entries(categoryMap).map(([name, value]) => ({
-        name,
-        value: Number(value.toFixed(2)),
-      }))
-    );
-
-    setByPerson(
-      Object.entries(personMap).map(([person, total]) => ({
-        person,
-        total: Number(total.toFixed(2)),
-      }))
-    );
-  }, [expenses]);
-
-  // =========================
-  // EVOLUCIÓN
-  // =========================
-  useEffect(() => {
-    const evolution = {};
-
-    expenses.forEach((e) => {
-      const d = new Date(e.date);
-      const year = d.getFullYear();
-      const month = d.getMonth();
-      const day = d.getDate();
-
-      if (view === "year") {
-        if (year !== selectedYear) return;
-        evolution[month] = (evolution[month] || 0) + e.amount;
-      }
-
-      if (view === "month") {
-        if (year !== selectedYear || month !== selectedMonth)
-          return;
-        evolution[day] = (evolution[day] || 0) + e.amount;
-      }
+  // ── FILTRO POR PERÍODO ──────────────────────
+  const filtered = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    return expenses.filter((e) => {
+      const d = parseDate(e.date);
+      if (period === "month")   return d.getFullYear() === y && d.getMonth() === m;
+      if (period === "3months") return d >= new Date(y, m - 2, 1);
+      if (period === "year")    return d.getFullYear() === y;
+      return true;
     });
+  }, [expenses, period]);
 
-    const formatted = Object.entries(evolution)
-      .sort((a, b) => Number(a[0]) - Number(b[0]))
+  // ── RESUMEN TOTAL ────────────────────────────
+  const totalAmount = useMemo(
+    () => filtered.reduce((s, e) => s + e.amount, 0),
+    [filtered]
+  );
+
+  // ── RESUMEN POR PERSONA (dinámico) ───────────
+  const summaryByPerson = useMemo(() => {
+    const map = {};
+    filtered.forEach((e) => {
+      map[e.person] = (map[e.person] || 0) + e.amount;
+    });
+    return map;
+  }, [filtered]);
+
+  // Personas que aparecen en el resumen: miembros + Compartido (si hay gastos)
+  const summaryPersons = useMemo(() => {
+    const people = [
+      ...members.map((m) => m.display_name),
+      "Compartido",
+    ];
+    return people;
+  }, [members]);
+
+  // ── POR CATEGORÍA ────────────────────────────
+  const byCategory = useMemo(() => {
+    const map = {};
+    filtered.forEach((e) => { map[e.category] = (map[e.category] || 0) + e.amount; });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value: Number(value.toFixed(2)) }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered]);
+
+  // ── POR PERSONA ──────────────────────────────
+  const byPerson = useMemo(() => {
+    const map = {};
+    filtered.forEach((e) => { map[e.person] = (map[e.person] || 0) + e.amount; });
+    return Object.entries(map).map(([person, total]) => ({
+      person,
+      total: Number(total.toFixed(2)),
+    }));
+  }, [filtered]);
+
+  // ── EVOLUCIÓN ────────────────────────────────
+  const evolutionData = useMemo(() => {
+    const byDay = period === "month";
+    const map = {};
+    filtered.forEach((e) => {
+      const d = parseDate(e.date);
+      const key = byDay
+        ? String(d.getDate()).padStart(2, "0")
+        : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      map[key] = (map[key] || 0) + e.amount;
+    });
+    return Object.entries(map)
+      .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([key, total]) => ({
-        label:
-          view === "year"
-            ? new Date(0, key).toLocaleString("es-ES", {
-                month: "short",
-              })
-            : key,
+        label: byDay
+          ? `${parseInt(key, 10)}`
+          : new Date(Number(key.split("-")[0]), Number(key.split("-")[1]) - 1)
+              .toLocaleString("es-ES", { month: "short", year: "2-digit" }),
         total: Number(total.toFixed(2)),
       }));
+  }, [filtered, period]);
 
-    setEvolutionData(formatted);
-  }, [expenses, view, selectedYear, selectedMonth]);
+  // ── TOP GASTOS ───────────────────────────────
+  const topExpenses = useMemo(
+    () => [...filtered].sort((a, b) => b.amount - a.amount).slice(0, 5),
+    [filtered]
+  );
 
-  // =========================
-  // RENDER
-  // =========================
+  const isEmpty = filtered.length === 0;
+
+  // Clase CSS para la tarjeta de persona según índice
+  const personCardClass = (name) => {
+    if (name === "Compartido") return "summary-card compartido";
+    const idx = members.findIndex((m) => m.display_name === name);
+    return idx === 0 ? "summary-card fran" : "summary-card eli";
+  };
+
   return (
     <div className="stats-page">
-      <h2>Gastos por categoría</h2>
 
-      {byCategory.length === 0 ? (
-        <p>No hay datos todavía</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart>
-            <Pie
-              data={byCategory}
-              dataKey="value"
-              nameKey="name"
-              outerRadius={110}
-              label
+      {/* HEADER */}
+      <div className="stats-header">
+        <h1>Estadísticas</h1>
+        <div className="period-tabs">
+          {PERIODS.map((p) => (
+            <button
+              key={p.key}
+              className={`period-tab${period === p.key ? " active" : ""}`}
+              onClick={() => setPeriod(p.key)}
             >
-              {byCategory.map((_, i) => (
-                <Cell
-                  key={i}
-                  fill={COLORS[i % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
-      )}
-
-      <h2 style={{ marginTop: 40 }}>
-        ¿Quién ha gastado más?
-      </h2>
-
-      {byPerson.length === 0 ? (
-        <p>No hay datos todavía</p>
-      ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={byPerson}>
-            <XAxis dataKey="person" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="total" fill="#0088FE" />
-          </BarChart>
-        </ResponsiveContainer>
-      )}
-
-      <h2 style={{ marginTop: 40 }}>
-        Evolución de gastos
-      </h2>
-
-      <div className="stats-controls">
-        <select
-          className="stats-select"
-          value={view}
-          onChange={(e) => setView(e.target.value)}
-        >
-          <option value="month">Vista mensual</option>
-          <option value="year">Vista anual</option>
-        </select>
-
-        <select
-          className="stats-select"
-          value={selectedYear}
-          onChange={(e) =>
-            setSelectedYear(Number(e.target.value))
-          }
-        >
-          {[2025, 2026, 2027, 2028, 2029, 2030].map(
-            (y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            )
-          )}
-        </select>
-
-        {view === "month" && (
-          <select
-            className="stats-select"
-            value={selectedMonth}
-            onChange={(e) =>
-              setSelectedMonth(Number(e.target.value))
-            }
-          >
-            {Array.from({ length: 12 }).map((_, i) => (
-              <option key={i} value={i}>
-                {new Date(0, i).toLocaleString("es-ES", {
-                  month: "long",
-                })}
-              </option>
-            ))}
-          </select>
-        )}
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={evolutionData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="label" />
-          <YAxis />
-          <Tooltip />
-          <Line
-            type="monotone"
-            dataKey="total"
-            stroke="#00C49F"
-            strokeWidth={2}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {/* TARJETAS RESUMEN */}
+      <div className="summary-cards">
+        <div className="summary-card total">
+          <span className="summary-label">Total</span>
+          <span className="summary-value">{formatEur(totalAmount)}</span>
+        </div>
+        {summaryPersons.map((name) => (
+          <div key={name} className={personCardClass(name)}>
+            <span className="summary-label">{name}</span>
+            <span className="summary-value">{formatEur(summaryByPerson[name] || 0)}</span>
+          </div>
+        ))}
+      </div>
+
+      {isEmpty ? (
+        <div className="stats-empty">Sin gastos en este período 🌿</div>
+      ) : (
+        <>
+          {/* FILA DE GRÁFICOS */}
+          <div className="charts-row">
+            <div className="chart-card">
+              <h3>Por categoría</h3>
+              <ResponsiveContainer width="100%" height={270}>
+                <PieChart>
+                  <Pie
+                    data={byCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    outerRadius={105}
+                    labelLine={false}
+                    label={PieLabel}
+                  >
+                    {byCategory.map((entry, i) => (
+                      <Cell key={i} fill={categoryColor(entry.name)} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v) => formatEur(v)} />
+                  <Legend iconType="circle" iconSize={10} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="chart-card">
+              <h3>Por persona</h3>
+              <ResponsiveContainer width="100%" height={270}>
+                <BarChart data={byPerson} barSize={54}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="person" axisLine={false} tickLine={false} tick={{ fontSize: 13 }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v + "€"} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => formatEur(v)} cursor={{ fill: "rgba(0,0,0,0.04)" }} />
+                  <Bar dataKey="total" radius={[8, 8, 0, 0]}>
+                    {byPerson.map((entry, i) => (
+                      <Cell key={i} fill={personColors[entry.person] || "#9ca3af"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* EVOLUCIÓN */}
+          <div className="chart-card chart-full">
+            <h3>Evolución del gasto{period === "month" ? " (días)" : ""}</h3>
+            {evolutionData.length === 0 ? (
+              <p className="chart-empty">Sin datos</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={230}>
+                <AreaChart data={evolutionData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.18} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => v + "€"} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => formatEur(v)} />
+                  <Area
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#6366f1"
+                    strokeWidth={2.5}
+                    fill="url(#areaGrad)"
+                    dot={{ r: 3, fill: "#6366f1", strokeWidth: 0 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* TOP GASTOS */}
+          <div className="chart-card chart-full">
+            <h3>Top gastos del período</h3>
+            <div className="top-list">
+              {topExpenses.map((e, i) => {
+                const [yr, mo, dy] = String(e.date).slice(0, 10).split("-");
+                const pColor = personColors[e.person] || "#9ca3af";
+                const cColor = categoryColor(e.category);
+                return (
+                  <div key={e.id} className="top-row">
+                    <span className="top-rank">#{i + 1}</span>
+                    <div className="top-info">
+                      <span className="top-title">{e.title}</span>
+                      <span className="top-meta">
+                        <span className="top-badge" style={{ background: pColor + "20", color: pColor }}>
+                          {e.person}
+                        </span>
+                        <span className="top-badge" style={{ background: cColor + "20", color: cColor }}>
+                          {e.category}
+                        </span>
+                        <span className="top-date">{dy}/{mo}/{yr}</span>
+                      </span>
+                    </div>
+                    <span className="top-amount">{formatEur(e.amount)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

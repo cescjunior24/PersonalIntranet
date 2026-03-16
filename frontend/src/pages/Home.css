@@ -1,70 +1,186 @@
+/* =============================================
+   HOME PAGE
+   ============================================= */
 .home-page {
-  padding: 16px;
-  max-width: 1100px;
+  padding: 0 20px 60px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-/* =========================
-   HERO
-========================= */
+/* ── HERO ────────────────────────────────────── */
 .home-hero {
   text-align: center;
-  margin-bottom: 32px;
+  padding: 60px 20px 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
 }
 
-.home-hero h1 {
-  font-size: 28px;
-  margin-bottom: 8px;
+.hero-heart {
+  font-size: 42px;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: heartbeat 2.8s ease-in-out infinite;
+  line-height: 1;
 }
 
-.home-hero p {
-  font-size: 15px;
-  color: #555;
-  max-width: 600px;
-  margin: 0 auto;
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14%       { transform: scale(1.18); }
+  28%       { transform: scale(1); }
+  42%       { transform: scale(1.12); }
+  56%       { transform: scale(1); }
 }
 
-/* =========================
-   GRID
-========================= */
-.home-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-
-/* Lista */
-.home-list {
-  padding-left: 20px;
+.hero-title {
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: -1px;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0;
 }
 
-.home-list li {
-  margin-bottom: 6px;
+.hero-sub {
+  font-size: 15px;
+  color: var(--text-2);
+  line-height: 1.7;
+  max-width: 440px;
+  margin: 0;
 }
 
-/* =========================
-   TABLET
-========================= */
+/* ── GRID ────────────────────────────────────── */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
 @media (min-width: 600px) {
-  .home-hero h1 {
-    font-size: 32px;
-  }
-
-  .home-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .home-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* =========================
-   DESKTOP
-========================= */
-@media (min-width: 1024px) {
-  .home-page {
-    padding: 32px;
-  }
+/* ── HOME CARD ───────────────────────────────── */
+.home-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  cursor: pointer;
+}
 
-  .home-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+/* Subtle gradient shine on hover */
+.home-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--card-gradient);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: var(--radius);
+}
+
+.home-card:hover::before {
+  opacity: 0.04;
+}
+
+.home-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.home-card--soon {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.home-card--soon:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Icon wrapper */
+.hc-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+}
+
+.hc-icon {
+  font-size: 24px;
+}
+
+/* Body */
+.hc-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.hc-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.hc-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.hc-soon-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--border);
+  color: var(--text-3);
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+
+.hc-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Arrow */
+.hc-arrow {
+  font-size: 18px;
+  color: var(--text-3);
+  flex-shrink: 0;
+  transition: transform 0.2s, color 0.2s;
+}
+
+.home-card:hover .hc-arrow {
+  transform: translateX(4px);
+  color: var(--primary);
+}
+
+/* ── MOBILE ──────────────────────────────────── */
+@media (max-width: 480px) {
+  .hero-title { font-size: 28px; }
+  .home-hero  { padding: 40px 10px 36px; }
 }

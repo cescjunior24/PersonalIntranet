@@ -2,226 +2,205 @@ import { useEffect, useState } from "react";
 import Card from "../components/common/Card";
 import Button from "../components/ui/Button";
 import AddExpenseForm from "../components/expenses/AddExpenseForm";
+import CategoriesManager, { categoryColor } from "../components/expenses/CategoriesManager";
 import "./Expenses.css";
 import { Link } from "react-router-dom";
-import { API_URL } from "../config";
+import { apiFetch } from "../config";
 
 const PAGE_SIZE = 20;
 
+// Colores de persona — azul, rosa, verde
+const PERSON_PALETTE = ["#4F8EF7", "#F76497", "#43C59E"];
+function personColor(name, members) {
+  if (name === "Compartido") return "#43C59E";
+  const idx = (members || []).findIndex((m) => m.display_name === name);
+  return PERSON_PALETTE[idx >= 0 ? idx : 0];
+}
+
 function Expenses() {
-  const [expenses, setExpenses] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [editingExpense, setEditingExpense] = useState(null);
+  const [expenses,        setExpenses]        = useState([]);
+  const [categories,      setCategories]      = useState([]);
+  const [members,         setMembers]         = useState([]);
+  const [showForm,        setShowForm]        = useState(false);
+  const [showCatManager,  setShowCatManager]  = useState(false);
+  const [visibleCount,    setVisibleCount]    = useState(PAGE_SIZE);
+  const [editingExpense,  setEditingExpense]  = useState(null);
+  const [confirmDelete,   setConfirmDelete]   = useState(null);
 
-  // =========================
-  // NORMALIZAR DATOS (Postgres NUMERIC → number)
-  // =========================
-  const normalizeExpense = (e) => ({
-    ...e,
-    amount: Number(e.amount),
-  });
+  const normalizeExpense = (e) => ({ ...e, amount: Number(e.amount) });
 
-  // =========================
-  // CARGAR GASTOS
-  // =========================
   useEffect(() => {
-    fetch(`${API_URL}/api/expenses`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Error cargando gastos");
-        return res.json();
-      })
-      .then((data) => {
-        const normalized = data.map(normalizeExpense);
+    apiFetch(`/api/expenses`)
+      .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+      .then((data) => setExpenses(data.map(normalizeExpense).sort((a, b) => String(b.date).localeCompare(String(a.date)))))
+      .catch((err) => console.error("Error cargando gastos:", err));
 
-        const sorted = normalized.sort(
-          (a, b) => new Date(b.date) - new Date(a.date)
-        );
+    apiFetch(`/api/categories`)
+      .then((r) => r.json())
+      .then(setCategories)
+      .catch(() => {});
 
-        setExpenses(sorted);
-      })
-      .catch((err) =>
-        console.error("Error cargando gastos:", err)
-      );
+    apiFetch(`/api/couples/info`)
+      .then((r) => r.json())
+      .then((d) => setMembers(d.members || []))
+      .catch(() => {});
   }, []);
 
-  // =========================
-  // AÑADIR / EDITAR GASTO
-  // =========================
-  const handleAddExpense = (updatedExpense) => {
-    const normalized = normalizeExpense(updatedExpense);
-
+  const handleAddExpense = (updated) => {
+    const n = normalizeExpense(updated);
     setExpenses((prev) => {
-      const exists = prev.find((e) => e.id === normalized.id);
-
-      if (exists) {
-        return prev.map((e) =>
-          e.id === normalized.id ? normalized : e
-        );
-      }
-
-      return [normalized, ...prev];
+      const exists = prev.find((e) => e.id === n.id);
+      if (exists) return prev.map((e) => (e.id === n.id ? n : e));
+      return [n, ...prev];
     });
-
     setShowForm(false);
     setEditingExpense(null);
   };
 
-  // =========================
-  // ELIMINAR GASTO
-  // =========================
   const handleDeleteExpense = (id) => {
-    fetch(`${API_URL}/api/expenses/${id}`, {
-      method: "DELETE",
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error al eliminar gasto");
-        }
-        return res.json();
-      })
-      .then(() => {
-        setExpenses((prev) =>
-          prev.filter((expense) => expense.id !== id)
-        );
-      })
-      .catch((err) =>
-        console.error("Error eliminando gasto:", err)
-      );
+    apiFetch(`/api/expenses/${id}`, { method: "DELETE" })
+      .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+      .then(() => { setExpenses((prev) => prev.filter((e) => e.id !== id)); setConfirmDelete(null); })
+      .catch((err) => console.error("Error eliminando gasto:", err));
   };
 
-  // =========================
-  // PAGINACIÓN
-  // =========================
   const visibleExpenses = expenses.slice(0, visibleCount);
 
-  // =========================
-  // AGRUPAR POR MES
-  // =========================
-  const groupedExpenses = visibleExpenses.reduce(
-    (groups, expense) => {
-      const date = new Date(expense.date);
-      const key = date.toLocaleString("es-ES", {
-        month: "long",
-        year: "numeric",
-      });
-
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-
-      groups[key].push(expense);
-      return groups;
-    },
-    {}
-  );
+  const groupedExpenses = visibleExpenses.reduce((groups, expense) => {
+    const [y, m] = String(expense.date).slice(0, 10).split("-").map(Number);
+    const key = new Date(y, m - 1, 1).toLocaleString("es-ES", { month: "long", year: "numeric" });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(expense);
+    return groups;
+  }, {});
 
   return (
     <div className="expenses-page">
+
       {/* HEADER */}
       <div className="expenses-header">
         <h1>Gastos</h1>
-
         {!showForm && (
           <div className="expenses-actions">
-            <Button
-              text="➕ Añadir gasto"
-              className="btn-primary"
-              onClick={() => setShowForm(true)}
-            />
-
-            <Link to="/stats" className="stats-link">
-              📊 Estadísticas
-            </Link>
+            <button
+              className={`cat-toggle-btn${showCatManager ? " active" : ""}`}
+              onClick={() => setShowCatManager(!showCatManager)}
+              title="Gestionar categorías"
+            >
+              ⚙ Categorías
+            </button>
+            <Button text="+ Añadir" className="btn-primary" onClick={() => setShowForm(true)} />
+            <Link to="/stats" className="stats-link">📊 Estadísticas</Link>
           </div>
         )}
       </div>
 
-      {/* FORMULARIO */}
+      {/* CATEGORIES MANAGER */}
+      {showCatManager && !showForm && (
+        <CategoriesManager
+          categories={categories}
+          onCategoriesChange={setCategories}
+        />
+      )}
+
+      {/* FORM */}
       {showForm && (
         <AddExpenseForm
           expense={editingExpense}
+          categories={categories}
+          members={members}
           onAdd={handleAddExpense}
-          onCancel={() => {
-            setShowForm(false);
-            setEditingExpense(null);
-          }}
+          onCancel={() => { setShowForm(false); setEditingExpense(null); }}
         />
       )}
 
       {/* LISTADO */}
-      {!showForm &&
-        Object.entries(groupedExpenses).map(
-          ([month, items]) => {
-            const total = items.reduce(
-              (sum, expense) => sum + expense.amount,
-              0
-            );
+      {!showForm && Object.entries(groupedExpenses).map(([month, items]) => {
+        const total = items.reduce((s, e) => s + e.amount, 0);
+        return (
+          <div key={month} className="month-group">
+            <div className="month-header">
+              <h2 className="month-title">{month}</h2>
+              <span className="month-total">{total.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</span>
+            </div>
 
-            return (
-              <div key={month} className="month-group">
-                <h2 className="month-title">
-                  {month}
-                  <span className="month-total">
-                    — Total: {total.toFixed(2)} €
-                  </span>
-                </h2>
+            <div className="expense-list">
+              {items.map((expense) => {
+                const catColor    = categoryColor(expense.category);
+                const persColor   = personColor(expense.person, members);
+                const [yr, mo, dy] = String(expense.date).slice(0, 10).split("-");
 
-                {items.map((expense) => (
-                  <Card key={expense.id}>
-                    <div className="expense-row">
-                      <div>
-                        <strong>{expense.title}</strong>
+                return (
+                  <div key={expense.id} className="expense-item">
+                    <div className="expense-bar" style={{ background: catColor }} />
 
-                        <div className="expense-meta">
-                          {expense.person} · {expense.category}
-                          <span className="expense-date">
-                            ·{" "}
-                            {new Date(expense.date).toLocaleDateString("es-ES")}
-                          </span>
-                        </div>
+                    <div className="expense-body">
+                      <div className="expense-top-row">
+                        <span className="expense-title">{expense.title}</span>
+                        <span className="expense-amount">{expense.amount.toLocaleString("es-ES", { minimumFractionDigits: 2 })} €</span>
                       </div>
+                      <div className="expense-bottom-row">
+                        <span
+                          className="expense-badge"
+                          style={{ background: persColor + "20", color: persColor }}
+                        >
+                          {expense.person}
+                        </span>
+                        <span
+                          className="expense-badge"
+                          style={{ background: catColor + "20", color: catColor }}
+                        >
+                          {expense.category}
+                        </span>
+                        <span className="expense-date">{dy}/{mo}/{yr}</span>
 
-                      <div className="expense-actions">
-                        <div className="expense-amount">
-                          {expense.amount.toFixed(2)} €
+                        <div className="expense-actions">
+                          <button
+                            className="icon-btn edit-btn"
+                            title="Editar"
+                            onClick={() => { setEditingExpense(expense); setShowForm(true); }}
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="icon-btn delete-btn"
+                            title="Eliminar"
+                            onClick={() => setConfirmDelete(expense.id)}
+                          >
+                            🗑️
+                          </button>
                         </div>
-
-                        <Button
-                          text="✏️"
-                          className="btn-edit"
-                          onClick={() => {
-                            setEditingExpense(expense);
-                            setShowForm(true);
-                          }}
-                        />
-
-                        <Button
-                          text="🗑️"
-                          className="btn-delete"
-                          onClick={() =>
-                            handleDeleteExpense(expense.id)
-                          }
-                        />
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </div>
-            );
-          }
-        )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
 
       {/* CARGAR MÁS */}
       {!showForm && visibleCount < expenses.length && (
         <div className="load-more">
           <Button
-            text="Cargar más gastos"
+            text="Cargar más"
             className="btn-secondary"
-            onClick={() =>
-              setVisibleCount((prev) => prev + PAGE_SIZE)
-            }
+            onClick={() => setVisibleCount((p) => p + PAGE_SIZE)}
           />
+        </div>
+      )}
+
+      {/* CONFIRM DELETE MODAL */}
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <p className="modal-text">¿Eliminar este gasto?</p>
+            <div className="modal-actions">
+              <button className="btn-secondary modal-btn" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+              <button className="btn-danger modal-btn" onClick={() => handleDeleteExpense(confirmDelete)}>Eliminar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

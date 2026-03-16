@@ -1,3 +1,74 @@
-body {
-  font-family: "Montserrat", system-ui, sans-serif;
+/* =============================================
+   DESIGN SYSTEM — OUR LITTLE WORLD
+   ============================================= */
+:root {
+  --primary:        #6366f1;
+  --primary-light:  rgba(99, 102, 241, 0.1);
+  --accent:         #f43f5e;
+  --gradient:       linear-gradient(135deg, #6366f1 0%, #f43f5e 100%);
+  --gradient-soft:  linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(244,63,94,0.06) 100%);
+
+  --bg:        #f5f4ff;
+  --surface:   #ffffff;
+  --text:      #1a1a2e;
+  --text-2:    #4b5563;
+  --text-3:    #9ca3af;
+  --border:    #e5e7eb;
+
+  --radius-sm: 10px;
+  --radius:    16px;
+  --radius-lg: 24px;
+
+  --shadow-sm: 0 1px 4px rgba(99, 102, 241, 0.07);
+  --shadow:    0 4px 16px rgba(99, 102, 241, 0.1);
+  --shadow-lg: 0 12px 40px rgba(99, 102, 241, 0.16);
+
+  /* Category colors */
+  --cat-comida:     #f97316;
+  --cat-ocio:       #3b82f6;
+  --cat-boticelli:  #8b5cf6;
+  --cat-capricho:   #ec4899;
+  --cat-transporte: #14b8a6;
+  --cat-necesidad:  #22c55e;
+
+  /* Person colors */
+  --person-fran:       #4F8EF7;
+  --person-eli:        #F76497;
+  --person-compartido: #43C59E;
 }
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: "Montserrat", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+/* Remove Vite's #root styling */
+#root {
+  max-width: none;
+  padding: 0;
+  text-align: left;
+}
+
+/* Main layout wrapper */
+.main-content {
+  min-height: calc(100vh - 64px);
+}
+
+/* Scrollbar subtle */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9ca3af; }

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Button from "../ui/Button";
 import Card from "../common/Card";
 import "./AddRestaurantForm.css";
-import { API_URL } from "../../config";
+import { apiFetch } from "../../config";
 
 function AddRestaurantForm({ onAdd, onCancel, restaurant }) {
   const today = new Date().toISOString().split("T")[0];
@@ -65,13 +65,10 @@ useEffect(() => {
     }
 
     const isEditing = Boolean(restaurant);
-    const url = isEditing
-      ? `${API_URL}/api/restaurants/${restaurant.id}`
-      : `${API_URL}/api/restaurants`;
-
+    const url = isEditing ? `/api/restaurants/${restaurant.id}` : `/api/restaurants`;
     const method = isEditing ? "PUT" : "POST";
 
-    fetch(url, {
+    apiFetch(url, {
       method,
       body: formData,
     })

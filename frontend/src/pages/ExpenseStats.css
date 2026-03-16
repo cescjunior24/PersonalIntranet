@@ -1,72 +1,248 @@
+/* =============================================
+   STATS PAGE
+   ============================================= */
 .stats-page {
-  padding: 16px;
-  max-width: 900px;
+  padding: 20px 16px 40px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
-.stats-page h1 {
-  margin-bottom: 16px;
-  text-align: center;
-}
-
-/* =========================
-   CONTROLES DE STATS
-========================= */
-
-.stats-controls {
+/* ── HEADER ─────────────────────────────────── */
+.stats-header {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   flex-wrap: wrap;
   gap: 12px;
-  margin: 20px 0 30px;
-  padding: 12px;
-  background-color: #f8f8f8;
+  margin-bottom: 24px;
+}
+
+.stats-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* ── PERIOD TABS ─────────────────────────────── */
+.period-tabs {
+  display: flex;
+  gap: 3px;
+  background: #f0f0f0;
   border-radius: 12px;
-  align-items: center;
+  padding: 4px;
 }
 
-/* Select base */
-.stats-select {
-  appearance: none;
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  padding: 10px 14px;
+.period-tab {
+  padding: 7px 18px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
   font-size: 14px;
+  font-weight: 500;
+  color: #666;
   cursor: pointer;
-  min-width: 140px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.18s ease;
+  white-space: nowrap;
 }
 
-/* Hover / focus */
-.stats-select:hover {
-  border-color: #aaa;
+.period-tab:hover {
+  color: #222;
 }
 
-.stats-select:focus {
-  outline: none;
-  border-color: #0088fe;
-  box-shadow: 0 0 0 2px rgba(0, 136, 254, 0.15);
+.period-tab.active {
+  background: #fff;
+  color: #111;
+  font-weight: 600;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.13);
 }
 
-/* =========================
-   MOBILE
-========================= */
-@media (max-width: 480px) {
-  .stats-controls {
+/* ── SUMMARY CARDS ───────────────────────────── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  border-radius: 16px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: white;
+}
+
+.summary-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  opacity: 0.8;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.summary-card.total {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.summary-card.fran {
+  background: linear-gradient(135deg, #4F8EF7 0%, #2563EB 100%);
+}
+
+.summary-card.eli {
+  background: linear-gradient(135deg, #F76497 0%, #E11D48 100%);
+}
+
+.summary-card.compartido {
+  background: linear-gradient(135deg, #43C59E 0%, #059669 100%);
+}
+
+/* ── CHART CARDS ─────────────────────────────── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.chart-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px 20px 16px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.07);
+}
+
+.chart-card h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.chart-full {
+  margin-bottom: 14px;
+}
+
+.chart-empty {
+  color: #bbb;
+  text-align: center;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+/* ── TOP EXPENSES ────────────────────────────── */
+.top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fafafa;
+  transition: background 0.15s;
+}
+
+.top-row:hover {
+  background: #f3f3f3;
+}
+
+.top-rank {
+  font-size: 12px;
+  font-weight: 700;
+  color: #bbb;
+  min-width: 26px;
+}
+
+.top-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.top-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.top-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.top-date {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.top-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: #222;
+  white-space: nowrap;
+}
+
+/* ── EMPTY STATE ─────────────────────────────── */
+.stats-empty {
+  text-align: center;
+  padding: 80px 0;
+  color: #aaa;
+  font-size: 16px;
+}
+
+/* ── MOBILE ──────────────────────────────────── */
+@media (max-width: 640px) {
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-value {
+    font-size: 17px;
+  }
+
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-header {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
-  .stats-select {
+  .period-tabs {
     width: 100%;
+    justify-content: space-between;
   }
-}
 
-/* =========================
-   DESKTOP
-========================= */
-@media (min-width: 1024px) {
-  .stats-controls {
-    justify-content: flex-start;
+  .period-tab {
+    flex: 1;
+    text-align: center;
+    padding: 7px 8px;
+    font-size: 13px;
   }
 }

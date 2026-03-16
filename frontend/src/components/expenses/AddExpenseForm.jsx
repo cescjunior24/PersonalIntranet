@@ -2,47 +2,47 @@ import { useEffect, useState } from "react";
 import Card from "../common/Card";
 import Button from "../ui/Button";
 import "./AddExpenseForm.css";
-import { API_URL } from "../../config";
+import { apiFetch } from "../../config";
 
-function AddExpenseForm({ onAdd, onCancel, expense }) {
+function AddExpenseForm({ onAdd, onCancel, expense, categories, members }) {
   const today = new Date().toISOString().split("T")[0];
 
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [person, setPerson] = useState("Fran");
-  const [category, setCategory] = useState("Comida");
-  const [date, setDate] = useState(today);
+  const [title,    setTitle]    = useState("");
+  const [amount,   setAmount]   = useState("");
+  const [person,   setPerson]   = useState("");
+  const [category, setCategory] = useState("");
+  const [date,     setDate]     = useState(today);
 
-  // 🔥 PREFILL SI EDITAMOS
+  // Personas disponibles: miembros de la pareja + Compartido
+  const personOptions = [
+    ...(members || []).map((m) => m.display_name),
+    "Compartido",
+  ];
+
+  // Prefill al editar
   useEffect(() => {
     if (expense) {
       setTitle(expense.title);
       setAmount(expense.amount);
       setPerson(expense.person);
       setCategory(expense.category);
-      setDate(expense.date);
+      setDate(String(expense.date).slice(0, 10));
+    } else {
+      // Valores por defecto: primera persona, primera categoría
+      if (personOptions.length > 0) setPerson(personOptions[0]);
+      if (categories && categories.length > 0) setCategory(categories[0].name);
     }
-  }, [expense]);
+  }, [expense, members, categories]);  // eslint-disable-line
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const payload = {
-      title,
-      amount: Number(amount),
-      person,
-      category,
-      date,
-    };
-
+    const payload = { title, amount: Number(amount), person, category, date };
     const isEditing = Boolean(expense);
-    const url = isEditing
-      ? `${API_URL}/api/expenses/${expense.id}`
-      : `${API_URL}/api/expenses`;
-
+    const url    = isEditing ? `/api/expenses/${expense.id}` : `/api/expenses`;
     const method = isEditing ? "PUT" : "POST";
 
-    fetch(url, {
+    apiFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -51,17 +51,14 @@ function AddExpenseForm({ onAdd, onCancel, expense }) {
         if (!res.ok) throw new Error("Error guardando gasto");
         return res.json();
       })
-      .then((data) => {
-        onAdd(data);
-      })
-      .catch((err) =>
-        console.error("Error guardando gasto:", err)
-      );
+      .then((data) => onAdd(data))
+      .catch((err) => console.error("Error guardando gasto:", err));
   };
 
   return (
     <Card title={expense ? "Editar gasto" : "Añadir gasto"}>
       <form className="expense-form" onSubmit={handleSubmit}>
+
         <div className="form-group">
           <label>Título</label>
           <input
@@ -86,22 +83,25 @@ function AddExpenseForm({ onAdd, onCancel, expense }) {
         <div className="form-group">
           <label>Persona</label>
           <select value={person} onChange={(e) => setPerson(e.target.value)}>
-            <option value="Fran">Fran</option>
-            <option value="Eli">Eli</option>
-            <option value="Compartido">Compartido</option>
+            {personOptions.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
           </select>
         </div>
 
         <div className="form-group">
           <label>Categoría</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="Comida">Comida</option>
-            <option value="Ocio">Ocio</option>
-            <option value="Boticelli">Boticelli</option>
-            <option value="Capricho">Capricho</option>
-            <option value="Transporte">Transporte</option>
-            <option value="Necesidad">Necesidad</option>
-          </select>
+          {categories && categories.length > 0 ? (
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          ) : (
+            <div className="no-categories-hint">
+              Aún no hay categorías. Créalas con el botón <strong>⚙ Categorías</strong>.
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -114,6 +114,7 @@ function AddExpenseForm({ onAdd, onCancel, expense }) {
             text={expense ? "Guardar cambios" : "Guardar"}
             type="submit"
             className="btn-primary"
+            disabled={!category}
           />
           <Button text="Cancelar" onClick={onCancel} className="btn-secondary" />
         </div>
